@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  <title>AI Code Review & Documentation</title>
+  <script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+          mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+        }
+      }
+    }
+  }
+</script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
+<script>
+  tailwind.config = {
+    plugins: [tailwindcss.typography],
+    theme: {
+      extend: {
+        typography: {
+          DEFAULT: {
+            css: {
+              h2: { color: "#4f46e5" },
+              h3: { color: "#0e7490" },
+              strong: { color: "#ea580c" },
+              code: { color: "#16a34a", background: "#f3f4f6", padding: "2px 4px", borderRadius: "6px" }
+            }
+          }
+        }
+      }
+    }
+  }
+</script>
+
+
+</html>

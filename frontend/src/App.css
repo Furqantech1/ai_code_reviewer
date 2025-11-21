@@ -1,0 +1,139 @@
+/* App.css */
+
+/* ===== Animations ===== */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.5s ease-out forwards;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+/* ===== Custom Scrollbar ===== */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* Light mode scrollbar */
+  border-radius: 4px;
+}
+
+/* Dark mode overrides for scrollbar */
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6366f1;
+}
+
+/* ===== MARKDOWN STYLING FIXES ===== */
+
+/* 1. The Container (The Black Box) */
+.prose pre {
+  background-color: #0f172a !important; /* Always Dark Slate background */
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+.dark .prose pre {
+  border-color: #1e293b;
+}
+
+/* 2. Inline Code (e.g. `variable`) */
+/* This makes inline code distinct (Indigo) */
+.prose code {
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5 !important; /* Dark Indigo for Light Mode */
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.9em;
+}
+
+.dark .prose code {
+  color: #a5b4fc !important; /* Light Indigo for Dark Mode */
+  background: rgba(99, 102, 241, 0.15);
+}
+
+/* 3. CRITICAL FIX: Block Code Text Color */
+/* We must override the inline code color above when inside a <pre> tag */
+.prose pre code {
+  background-color: transparent !important;
+  color: #e2e8f0 !important; /* ALWAYS Light Gray/White, even in Light Mode */
+  padding: 0;
+  font-weight: 400;
+  font-size: 0.95em;
+}
+
+/* 4. General Text Colors for Light/Dark Mode readability */
+.prose h1, .prose h2, .prose h3, .prose strong {
+  color: #1e293b; /* Dark text for Light Mode */
+}
+
+.dark .prose h1, .dark .prose h2, .dark .prose h3, .dark .prose strong {
+  color: #f8fafc; /* Light text for Dark Mode */
+}
+
+.prose p, .prose ul, .prose ol, .prose li {
+  color: #334155; /* Slate-700 for Light Mode */
+}
+
+.dark .prose p, .dark .prose ul, .dark .prose ol, .dark .prose li {
+  color: #cbd5e1; /* Slate-300 for Dark Mode */
+}
+
+.prose blockquote {
+  border-left-color: #6366f1;
+  background: rgba(99, 102, 241, 0.05);
+  color: #475569;
+  font-style: italic;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+}
+
+.dark .prose blockquote {
+  color: #94a3b8;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.prose a {
+  color: #4f46e5;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.dark .prose a {
+  color: #818cf8;
+}
+
+.prose a:hover {
+  text-decoration: underline;
+}
