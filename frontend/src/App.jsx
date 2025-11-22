@@ -4,19 +4,20 @@ import ReactMarkdown from 'react-markdown';
 import { analyzeCode, checkHealth } from './services/api';
 import './App.css';
 
-// ===== STATIC CONFIGURATION =====
+// ===== STATIC CONFIGURATION (Moved outside component to fix scroll issues) =====
 const EDITOR_OPTIONS = {
   minimap: { enabled: false },
   fontSize: 15,
   lineNumbers: 'on',
   padding: { top: 16 },
-  scrollBeyondLastLine: false,
+  scrollBeyondLastLine: false, // Prevents scrolling into empty space
   automaticLayout: true,
   fontFamily: '"JetBrains Mono", "Fira Code", monospace',
   fontLigatures: true,
   wordWrap: 'on',
+  // FIX: This allows the page to scroll when you reach the top/bottom of the editor
   scrollbar: {
-    alwaysConsumeMouseWheel: false, // Desktop fix
+    alwaysConsumeMouseWheel: false,
     vertical: 'visible',
   }
 };
@@ -28,14 +29,15 @@ const DIFF_EDITOR_OPTIONS = {
   readOnly: true,
   minimap: { enabled: false },
   scrollBeyondLastLine: false,
+  // FIX: This allows the page to scroll when you reach the top/bottom of the diff view
   scrollbar: {
-    alwaysConsumeMouseWheel: false, // Desktop fix
+    alwaysConsumeMouseWheel: false,
     vertical: 'visible',
   }
 };
 
 function App() {
-  const [code, setCode] = useState('# Paste your code here...\n');
+  const [code, setCode] = useState('# Paste your code here...\ndef example_function(x):\n    return x * 2');
   const [language, setLanguage] = useState('python');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -55,7 +57,7 @@ function App() {
     return 'dark';
   });
 
-  // 1. Load History
+  // 1. Load History from LocalStorage
   useEffect(() => {
     const savedHistory = localStorage.getItem('code_history');
     if (savedHistory) {
@@ -63,7 +65,7 @@ function App() {
     }
   }, []);
 
-  // 2. Apply Theme
+  // 2. Apply Theme Class to HTML Root
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
@@ -74,12 +76,14 @@ function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // 3. Check Server Health
+  // 3. Check Server Health on Load
   useEffect(() => {
     checkHealth()
       .then(data => setServerStatus(data))
       .catch(() => setServerStatus({ status: 'offline' }));
   }, []);
+
+  // ===== HELPER FUNCTIONS =====
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
@@ -90,6 +94,7 @@ function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // Extract code block from Markdown for Diff View
   const extractCodeFromReview = (markdownText) => {
     if (!markdownText) return '';
     const match = markdownText.match(/```[\w]*\n([\s\S]*?)```/);
@@ -125,7 +130,7 @@ function App() {
     setLanguage(entry.language);
     setResults(entry.result);
     setShowSidebar(false);
-    setShowDiff(false); 
+    setShowDiff(false);
     showToast('History item restored', 'info');
   };
 
@@ -275,7 +280,7 @@ ${results.docstring}
         {/* Header Section */}
         <header className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10 bg-white/70 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl transition-all duration-300">
           <div className="text-center md:text-left">
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">🤖 AI Code Review</h1>
+            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">🤖 AI Code Reviewer & Documentation Generator</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm font-medium tracking-wide">Powered by DeepSeek V3.1</p>
           </div>
           
@@ -294,6 +299,14 @@ ${results.docstring}
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 group-hover:text-indigo-500 transition-colors"><path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
               )}
             </button>
+
+            <div className="flex items-center gap-3 px-4 py-2 bg-slate-100 dark:bg-slate-950/50 rounded-full border border-slate-200 dark:border-slate-800">
+              <span className="text-slate-500 dark:text-slate-400 text-sm font-semibold">Server:</span>
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase ${serverStatus?.status === 'healthy' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'}`}>
+                <span className={`w-2 h-2 rounded-full ${serverStatus?.status === 'healthy' ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' : 'bg-red-500 dark:bg-red-400'}`}></span>
+                {serverStatus?.status === 'healthy' ? 'Online' : 'Offline'}
+              </div>
+            </div>
           </div>
         </header>
 
@@ -301,7 +314,7 @@ ${results.docstring}
         <main className="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-8 relative items-start">
           
           {/* Left Column: Input & Controls */}
-          {/* RESPONSIVE FIX: sticky on desktop (lg), normal flow on mobile */}
+          {/* Sticky layout logic */}
           <div className={`flex flex-col gap-6 transition-all duration-500 ${
             results 
             ? 'lg:col-span-6 lg:sticky lg:top-24 lg:self-start' 
@@ -321,6 +334,7 @@ ${results.docstring}
               </div>
 
               <div className="flex gap-3">
+                {/* Diff Toggle Button */}
                 {results && (
                   <button 
                     onClick={() => setShowDiff(!showDiff)}
@@ -333,16 +347,15 @@ ${results.docstring}
                     {showDiff ? '👁️ Hide Diff' : '👁️ Compare Fix'}
                   </button>
                 )}
+
                 <button onClick={handleLoadExample} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-all hover:shadow-md">📄 Example</button>
                 <button onClick={handleClear} className="px-4 py-2 text-sm font-medium text-red-500 dark:text-red-400 bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-red-200 dark:hover:border-red-900/30 transition-all hover:shadow-md">🗑️ Clear</button>
               </div>
             </div>
 
             {/* Editor Container */}
-            {/* RESPONSIVE FIX: Mobile Height = 350px, Desktop Height = 500/550px */}
-            {/* This ensures editor doesn't fill the whole screen on mobile, allowing page scroll */}
-            <div className={`relative group rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 shadow-2xl bg-white dark:bg-[#1e1e1e] transition-colors duration-300 h-[350px] ${results ? 'lg:h-[550px]' : 'lg:h-[500px]'}`}>
-              <div className="absolute top-0 left-0 right-0 h-8 bg-slate-100 dark:bg-[#252526] flex items-center px-4 gap-2 border-b border-slate-200 dark:border-[#333] transition-colors duration-300 editor-header-grip">
+            <div className="relative group rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 shadow-2xl bg-white dark:bg-[#1e1e1e] transition-colors duration-300">
+              <div className="absolute top-0 left-0 right-0 h-8 bg-slate-100 dark:bg-[#252526] flex items-center px-4 gap-2 border-b border-slate-200 dark:border-[#333] transition-colors duration-300">
                 <div className="w-3 h-3 rounded-full bg-red-400/80 dark:bg-red-500/80"></div>
                 <div className="w-3 h-3 rounded-full bg-yellow-400/80 dark:bg-yellow-500/80"></div>
                 <div className="w-3 h-3 rounded-full bg-green-400/80 dark:bg-green-500/80"></div>
@@ -350,10 +363,11 @@ ${results.docstring}
                   {showDiff ? 'editor.diff' : 'editor.main'}
                 </span>
               </div>
-              <div className="pt-8 h-full">
+              <div className="pt-8">
+                {/* Conditional Rendering: DiffEditor vs Standard Editor */}
                 {showDiff && results ? (
                   <DiffEditor
-                    height="100%" // Fill the container
+                    height="550px"
                     language={language}
                     original={code}
                     modified={extractCodeFromReview(results.review)}
@@ -362,7 +376,7 @@ ${results.docstring}
                   />
                 ) : (
                   <Editor 
-                    height="100%" // Fill the container
+                    height={results ? "550px" : "500px"} 
                     language={language} 
                     value={code} 
                     onChange={(value) => setCode(value || '')} 
@@ -381,6 +395,8 @@ ${results.docstring}
           {/* Right Column: Results */}
           {results && (
             <div className="lg:col-span-6 space-y-6 animate-slideIn">
+              
+              {/* Download Button */}
               <button
                 onClick={handleDownload}
                 className="w-full py-3 rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-semibold flex items-center justify-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all"
@@ -391,6 +407,7 @@ ${results.docstring}
                 Download Report (.md)
               </button>
 
+              {/* Code Review Card */}
               <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xl flex flex-col max-h-[800px] transition-colors duration-300">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 flex justify-between items-center sticky top-0 z-10">
                   <h3 className="text-lg font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-2">📝 Code Review</h3>
@@ -401,6 +418,7 @@ ${results.docstring}
                 </div>
               </div>
 
+              {/* Documentation Card */}
               <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xl flex flex-col max-h-[800px] transition-colors duration-300">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 flex justify-between items-center sticky top-0 z-10">
                   <h3 className="text-lg font-bold text-purple-600 dark:text-purple-400 flex items-center gap-2">📚 Documentation</h3>
@@ -422,13 +440,17 @@ ${results.docstring}
   );
 }
 
+// ===== SUB-COMPONENTS =====
+
+// 1. Typewriter Effect Component
 const TypewriterMarkdown = ({ content }) => {
   const [displayedContent, setDisplayedContent] = useState('');
+  
   useEffect(() => {
     setDisplayedContent('');
     let index = 0;
     const intervalId = setInterval(() => {
-      index += 3; 
+      index += 3; // Speed: 3 chars per 10ms
       if (index >= content.length) {
         setDisplayedContent(content);
         clearInterval(intervalId);
@@ -441,6 +463,7 @@ const TypewriterMarkdown = ({ content }) => {
   return <ReactMarkdown>{displayedContent}</ReactMarkdown>;
 };
 
+// 2. Toast Component
 const Toast = ({ message, type, onClose }) => {
   const styles = { success: 'bg-emerald-500 text-white border-emerald-600', error: 'bg-red-500 text-white border-red-600', info: 'bg-blue-500 text-white border-blue-600' };
   const icons = { success: '✓', error: '✕', info: 'ℹ' };

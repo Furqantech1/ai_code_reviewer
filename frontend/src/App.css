@@ -137,16 +137,3 @@
 .prose a:hover {
   text-decoration: underline;
 }
-
-/* ===== MOBILE SCROLL FIX ===== */
-/* This allows vertical scrolling (pan-y) on the editor containers */
-.monaco-editor,
-.monaco-scrollable-element,
-.overflow-guard {
-  touch-action: pan-y !important;
-}
-
-/* Optional: Adds a "grip" area style if needed */
-.editor-header-grip {
-  touch-action: auto !important; /* Ensure header always scrolls page */
-}
