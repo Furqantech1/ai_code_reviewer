@@ -25,16 +25,11 @@ app = FastAPI(title="AI Code Review & Documentation Tool")
 
 # CORS configuration for React frontend
 app.add_middleware(
-    # CORSMiddleware,
-    # allow_origins=["http://localhost:3000", "http://localhost:5173","https://ai-code-reviewer-taupe.vercel.app/"],
-    # allow_credentials=True,
-    # allow_methods=["*"],
-    # allow_headers=["*"],
     CORSMiddleware,
-    allow_origins=["*"],   # TEMP: allow all origins
+    allow_origins=["http://localhost:3000", "http://localhost:5173","https://ai-code-reviewer-taupe.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
 # OpenRouter API configuration
