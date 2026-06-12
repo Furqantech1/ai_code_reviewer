@@ -1,6 +1,6 @@
-# AI Code Reviewer & Documentation Generator (DeepSeek-V3.1)
+# AI Code Reviewer & Documentation Generator (Gemini 2.5 Flash)
 
-A full-stack AI-powered platform that performs intelligent code review, automated documentation generation, and PDF export for multiple programming languages — built using **React (Vite)** and **FastAPI**, integrated with **DeepSeek-V3.1** via **OpenRouter**.
+A full-stack AI-powered platform that performs intelligent code review, automated documentation generation, and PDF export for multiple programming languages — built using **React (Vite)** and **FastAPI**, integrated with **Google Gemini 2.5 Flash**.
 
 ## 🚀 Overview
 This project automates common developer workflows:
@@ -69,12 +69,12 @@ Supports:
 - python-dotenv  
 
 ### AI Integration
-- DeepSeek-V3.1 via OpenRouter  
-- Fallback models: Gemini 2.0 Flash, LLaMA 3.2, Phi-3  
+- Google Gemini 2.5 Flash
+- Fallback models: Gemini 1.5 Flash, Gemini 2.5 Pro
 
 ## ⚙️ System Architecture
 
-[React Frontend] → FastAPI Backend → OpenRouter → DeepSeek-V3.1
+[React Frontend] → FastAPI Backend → Google Gemini API
 
 ## 📦 Project Structure
 
@@ -112,4 +112,8 @@ npm run dev
 - Metrics dashboard  
 
 ## 🏁 Conclusion
-This project demonstrates how modern LLMs like **DeepSeek-V3.1** can enhance developer workflows by automating code review and documentation generation.
+This project demonstrates how modern LLMs like **Gemini 2.5 Flash** can enhance developer workflows by automating code review and documentation generation.
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).

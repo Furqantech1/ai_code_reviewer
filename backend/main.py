@@ -32,35 +32,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# OpenRouter API configuration
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-MODEL = "tngtech/deepseek-r1t2-chimera:free"
+# Gemini API configuration
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    GEMINI_API_KEY = os.getenv("OPENROUTER_API_KEY")  # Fallback to key stored under OPENROUTER_API_KEY variable
 
-print(f"✓ API Key loaded: {'Yes' if OPENROUTER_API_KEY else 'No'}")
-print(f"✓ Model: {MODEL}")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
-# Helper function to call DeepSeek via OpenRouter
-async def call_deepseek(prompt: str) -> str:
-    """Call DeepSeek-V3 via OpenRouter API with proper error handling"""
-    if not OPENROUTER_API_KEY:
-        raise HTTPException(status_code=500, detail="API key not configured")
+print(f"[OK] Gemini API Key loaded: {'Yes' if GEMINI_API_KEY else 'No'}")
+print(f"[OK] Model: {MODEL}")
+
+# Helper function to call Gemini API
+async def call_gemini(prompt: str) -> str:
+    """Call Gemini API with proper error handling"""
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="Gemini API key not configured")
     
     try:
+        url = f"{BASE_URL}/{MODEL}:generateContent?key={GEMINI_API_KEY}"
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
-                f"{OPENROUTER_BASE_URL}/chat/completions",
+                url,
                 headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                    "HTTP-Referer": "http://localhost:8000",
-                    "X-Title": "AI Code Review Tool",
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": MODEL,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.3,
-                    "max_tokens": 2000
+                    "contents": [
+                        {
+                            "parts": [
+                                {
+                                    "text": prompt
+                                }
+                            ]
+                        }
+                    ],
+                    "generationConfig": {
+                        "temperature": 0.3,
+                        "maxOutputTokens": 4096
+                    }
                 }
             )
             
@@ -73,30 +83,40 @@ async def call_deepseek(prompt: str) -> str:
                 print(f"API Error Response: {error_text}")
                 raise HTTPException(
                     status_code=response.status_code,
-                    detail=f"OpenRouter API error: {error_text}"
+                    detail=f"Gemini API error: {error_text}"
                 )
             
             # Parse response JSON
             response_data = response.json()
-            print(f"API Response Keys: {response_data.keys()}")
             
-            # Check if 'choices' exists in response
-            if 'choices' not in response_data:
+            # Handle error response format if any
+            if 'error' in response_data:
+                error_msg = response_data['error'].get('message', 'Unknown error')
+                raise HTTPException(status_code=500, detail=f"API Error: {error_msg}")
+                
+            # Check if 'candidates' exists in response
+            if 'candidates' not in response_data:
                 print(f"Full API Response: {response_data}")
-                # Handle error response format
-                if 'error' in response_data:
-                    error_msg = response_data['error'].get('message', 'Unknown error')
-                    raise HTTPException(status_code=500, detail=f"API Error: {error_msg}")
                 raise HTTPException(
                     status_code=500,
                     detail=f"Unexpected API response format: {response_data}"
                 )
             
-            # Extract the content
-            if len(response_data['choices']) == 0:
-                raise HTTPException(status_code=500, detail="API returned empty choices")
-            
-            return response_data['choices'][0]['message']['content']
+            candidates = response_data['candidates']
+            if not candidates or len(candidates) == 0:
+                raise HTTPException(status_code=500, detail="API returned empty candidates")
+                
+            candidate = candidates[0]
+            content = candidate.get('content', {})
+            parts = content.get('parts', [])
+            if not parts or len(parts) == 0:
+                finish_reason = candidate.get('finishReason')
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"API returned empty content. Finish reason: {finish_reason}"
+                )
+                
+            return parts[0].get('text', '')
             
     except httpx.TimeoutException:
         raise HTTPException(
@@ -182,20 +202,20 @@ async def analyze_code(request: CodeAnalysisRequest):
     if not request.code.strip():
         raise HTTPException(status_code=400, detail="Code cannot be empty")
     
-    print(f"\n📝 Analyzing {request.language} code ({len(request.code)} chars)...")
+    print(f"\n[ANALYZE] Analyzing {request.language} code ({len(request.code)} chars)...")
     
     try:
         # Generate code review
-        print("→ Generating code review...")
+        print("-> Generating code review...")
         review_prompt = create_review_prompt(request.code, request.language)
-        review = await call_deepseek(review_prompt)
+        review = await call_gemini(review_prompt)
         
         # Generate docstring
-        print("→ Generating documentation...")
+        print("-> Generating documentation...")
         docstring_prompt = create_docstring_prompt(request.code, request.language)
-        docstring = await call_deepseek(docstring_prompt)
+        docstring = await call_gemini(docstring_prompt)
         
-        print("✓ Analysis complete!\n")
+        print("[DONE] Analysis complete!\n")
         
         return CodeAnalysisResponse(
             review=review,
@@ -205,7 +225,7 @@ async def analyze_code(request: CodeAnalysisRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"✗ Analysis failed: {str(e)}\n")
+        print(f"[ERROR] Analysis failed: {str(e)}\n")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 # Run with: python -m uvicorn main:app --reload --port 8000

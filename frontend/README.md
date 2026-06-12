@@ -2,7 +2,7 @@
 
 5th Semester Mini Project | Information Science & Engineering
 
-A modern, intelligent web application that analyzes code snippets, detects bugs, suggests optimizations, and auto-generates professional documentation using the DeepSeek V3.1 AI model.
+A modern, intelligent web application that analyzes code snippets, detects bugs, suggests optimizations, and auto-generates professional documentation using the Google Gemini 2.5 Flash model.
 
 📸 Screenshots
 
@@ -61,7 +61,7 @@ Server: Uvicorn
 
 HTTP Client: HTTPX (Async requests)
 
-AI Provider: OpenRouter API (DeepSeek-V3 Model)
+AI Provider: Google Gemini API (Gemini 2.5 Flash Model)
 
 🚀 Installation & Setup
 
@@ -73,7 +73,7 @@ Node.js (v16+)
 
 Python (v3.8+)
 
-An API Key from OpenRouter
+A Gemini API Key from Google AI Studio
 
 1. Backend Setup (Python)
 
@@ -92,7 +92,7 @@ pip install fastapi uvicorn httpx python-dotenv
 
 Create a .env file in the same directory as main.py:
 
-OPENROUTER_API_KEY=sk-or-v1-your-api-key-here...
+GEMINI_API_KEY=your-gemini-api-key-here...
 
 
 Run the server:
@@ -148,6 +148,6 @@ Export: Click "Download Report" to save the findings.
 
 🛡️ License
 
-This project is developed for educational purposes.
+This project is licensed under the [MIT License](../LICENSE).
 
 Made with ❤️ by FURQAN NAIKWADI

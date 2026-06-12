@@ -1,10 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
 
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="AI-powered code reviewer and documentation generator. Get instant code reviews, auto-fix suggestions, and documentation powered by DeepSeek V3." />
+
+  <!-- Google Fonts: Inter (body) + Playfair Display (display headings) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+
   <!-- Tailwind via CDN -->
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
   <title>AI Code Review & Documentation</title>
@@ -14,13 +21,26 @@
     theme: {
       extend: {
         fontFamily: {
-          sans: ['Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+          sans: ['Inter', 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
           mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+          display: ['"Playfair Display"', 'Georgia', 'serif'],
+        },
+        colors: {
+          navy: {
+            950: '#060810',
+            900: '#0a0e1a',
+            800: '#0d1221',
+            700: '#111827',
+            600: '#1a2035',
+            500: '#1e2642',
+            400: '#2a3350',
+            300: '#3b4568',
+          }
         }
       }
     }
   }
-</script>
+  </script>
 </head>
 
 <body>
@@ -36,10 +56,10 @@
         typography: {
           DEFAULT: {
             css: {
-              h2: { color: "#4f46e5" },
-              h3: { color: "#0e7490" },
-              strong: { color: "#ea580c" },
-              code: { color: "#16a34a", background: "#f3f4f6", padding: "2px 4px", borderRadius: "6px" }
+              h2: { color: "#e8445a" },
+              h3: { color: "#f0576b" },
+              strong: { color: "#f59e0b" },
+              code: { color: "#34d399", background: "#111827", padding: "2px 4px", borderRadius: "6px" }
             }
           }
         }
@@ -47,6 +67,5 @@
     }
   }
 </script>
-
 
 </html>
