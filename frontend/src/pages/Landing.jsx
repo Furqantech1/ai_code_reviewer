@@ -192,7 +192,7 @@ export default function Landing() {
         {/* Right actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <a
-            href="#" target="_blank" rel="noopener noreferrer"
+            href="https://github.com/Furqantech1/ai_code_reviewer" target="_blank" rel="noopener noreferrer"
             style={{ fontSize: 14, color: 'var(--color-text-2)', textDecoration: 'none', transition: 'color 80ms ease' }}
             className="landing-nav-github"
             onMouseEnter={(e) => e.target.style.color = 'var(--color-text-1)'}
