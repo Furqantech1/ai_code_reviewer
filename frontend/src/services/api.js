@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+// In development, use empty string so requests go through the Vite proxy (same-origin).
+// In production, set VITE_API_URL to the actual backend URL.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const analyzeCode = async (code, language) => {
   try {

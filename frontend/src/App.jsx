@@ -1,21 +1,38 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Editor, { DiffEditor } from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeCode, checkHealth } from './services/api';
 import './App.css';
 
+// ===== FRAMER MOTION VARIANTS =====
+const appVariants = {
+  initial: { opacity: 0, y: 32 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.0, 0, 0.2, 1] }
+  },
+  exit: {
+    opacity: 0,
+    y: -16,
+    transition: { duration: 0.25, ease: [0.4, 0, 1, 1] }
+  }
+};
+
+// ===== CONSTANTS =====
 
 const EDITOR_OPTIONS = {
   minimap: { enabled: false },
-  fontSize: 15,
+  fontSize: 14,
   lineNumbers: 'on',
-  padding: { top: 16 },
+  padding: { top: 12 },
   scrollBeyondLastLine: false,
   automaticLayout: true,
   fontFamily: '"JetBrains Mono", "Fira Code", monospace',
   fontLigatures: true,
   wordWrap: 'on',
-
   scrollbar: {
     alwaysConsumeMouseWheel: false,
     vertical: 'visible',
@@ -24,17 +41,60 @@ const EDITOR_OPTIONS = {
 
 const DIFF_EDITOR_OPTIONS = {
   renderSideBySide: true,
-  fontSize: 15,
+  fontSize: 14,
   fontFamily: '"JetBrains Mono", "Fira Code", monospace',
   readOnly: true,
   minimap: { enabled: false },
   scrollBeyondLastLine: false,
-
   scrollbar: {
     alwaysConsumeMouseWheel: false,
     vertical: 'visible',
   }
 };
+
+const LANGUAGES = [
+  { value: 'python', label: 'Python' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'java', label: 'Java' },
+  { value: 'cpp', label: 'C++' },
+  { value: 'go', label: 'Go' },
+  { value: 'rust', label: 'Rust' },
+  { value: 'csharp', label: 'C#' },
+];
+
+// ===== HELPERS =====
+
+function getRelativeTime(timestamp) {
+  const now = new Date();
+  const then = new Date(timestamp);
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return then.toLocaleDateString();
+}
+
+function getLangBadgeClass(lang) {
+  const map = {
+    python: 'lang-badge--python',
+    javascript: 'lang-badge--javascript',
+    typescript: 'lang-badge--typescript',
+    java: 'lang-badge--java',
+    cpp: 'lang-badge--cpp',
+    go: 'lang-badge--go',
+    rust: 'lang-badge--rust',
+    csharp: 'lang-badge--csharp',
+  };
+  return map[lang] || '';
+}
+
+// ===== MAIN APP =====
 
 function App() {
   const [code, setCode] = useState('# Paste your code here...\ndef example_function(x):\n    return x * 2');
@@ -42,12 +102,13 @@ function App() {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [serverStatus, setServerStatus] = useState(null);
-  
+
   // UI & Feature States
   const [showDiff, setShowDiff] = useState(false);
   const [toast, setToast] = useState(null);
   const [history, setHistory] = useState([]);
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
+  const [activeTab, setActiveTab] = useState('review');
 
   // Theme State
   const [theme, setTheme] = useState(() => {
@@ -68,22 +129,26 @@ function App() {
   // 2. Apply Theme Class to HTML Root
   useEffect(() => {
     const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    root.classList.remove('dark', 'light');
+    root.classList.add(theme === 'dark' ? 'dark' : 'light');
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // 3. Check Server Health on Load
+  // 3. Check Server Health on Load & Periodically
   useEffect(() => {
-    checkHealth()
-      .then(data => setServerStatus(data))
-      .catch(() => setServerStatus({ status: 'offline' }));
+    const fetchStatus = () => {
+      checkHealth()
+        .then(data => setServerStatus(data))
+        .catch(() => setServerStatus({ status: 'offline' }));
+    };
+
+    fetchStatus();
+    const intervalId = setInterval(fetchStatus, 10000); // Poll every 10s
+
+    return () => clearInterval(intervalId);
   }, []);
 
-  // ===== HELPER FUNCTIONS =====
+  // ===== HANDLER FUNCTIONS =====
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
@@ -94,23 +159,11 @@ function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Extract code block from Markdown for Diff View
   const extractCodeFromReview = (markdownText) => {
     if (!markdownText) return '';
     const match = markdownText.match(/```[\w]*\n([\s\S]*?)```/);
     return match ? match[1].trim() : code;
   };
-
-  const languages = [
-    { value: 'python', label: '🐍 Python' },
-    { value: 'javascript', label: '📜 JavaScript' },
-    { value: 'java', label: '☕ Java' },
-    { value: 'cpp', label: '⚡ C++' },
-    { value: 'go', label: '🔵 Go' },
-    { value: 'rust', label: '🦀 Rust' },
-    { value: 'typescript', label: '💙 TypeScript' },
-    { value: 'csharp', label: '🎯 C#' }
-  ];
 
   const addToHistory = (code, lang, resultData) => {
     const newEntry = {
@@ -118,7 +171,7 @@ function App() {
       code,
       language: lang,
       result: resultData,
-      timestamp: new Date().toLocaleString()
+      timestamp: new Date().toISOString(),
     };
     const updatedHistory = [newEntry, ...history].slice(0, 10);
     setHistory(updatedHistory);
@@ -129,8 +182,9 @@ function App() {
     setCode(entry.code);
     setLanguage(entry.language);
     setResults(entry.result);
-    setShowSidebar(false);
+    setShowDrawer(false);
     setShowDiff(false);
+    setActiveTab('review');
     showToast('History item restored', 'info');
   };
 
@@ -143,27 +197,27 @@ function App() {
 
   const handleDownload = () => {
     if (!results) return;
-    const content = `# 🤖 AI Code Analysis Report
+    const content = `# CodeReview — AI Analysis Report
 Generated on: ${new Date().toLocaleString()}
 Language: ${language}
 
-## 💻 Original Code
+## Original Code
 \`\`\`${language}
 ${code}
 \`\`\`
 
 ---
 
-## 📝 Code Review
+## Code Review
 ${results.review}
 
 ---
 
-## 📚 Documentation
+## Documentation
 ${results.docstring}
 
 ---
-*Generated by AI Code Reviewer (Gemini 2.5 Flash)*
+*Generated by CodeReview (Gemini 2.5 Flash)*
 `;
     const blob = new Blob([content], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
@@ -174,7 +228,7 @@ ${results.docstring}
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast('Report downloaded successfully!', 'success');
+    showToast('Report downloaded', 'success');
   };
 
   const handleAnalyze = async () => {
@@ -185,13 +239,18 @@ ${results.docstring}
     setLoading(true);
     setResults(null);
     setShowDiff(false);
-    
+    setActiveTab('review');
+
     try {
       const data = await analyzeCode(code, language);
       setResults(data);
       addToHistory(code, language, data);
+      setServerStatus({ status: 'healthy' }); // Mark online on successful analysis
     } catch (err) {
       showToast(err.message || 'Something went wrong', 'error');
+      if (err.message && err.message.includes('server')) {
+        setServerStatus({ status: 'offline' });
+      }
     } finally {
       setLoading(false);
     }
@@ -201,242 +260,313 @@ ${results.docstring}
     setCode('');
     setResults(null);
     setShowDiff(false);
+    setActiveTab('review');
     showToast('Editor cleared', 'info');
   };
 
   const handleCopy = (text, label) => {
     navigator.clipboard.writeText(text);
-    showToast(`${label} copied to clipboard!`, 'success');
+    showToast(`${label} copied to clipboard`, 'success');
   };
 
-  const handleLoadExample = () => {
-    const examples = {
-      python: `def fibonacci(n):\n    if n == 0:\n        return 0\n    elif n == 1:\n        return 1\n    else:\n        return fibonacci(n-1) + fibonacci(n-2)\n\nresult = fibonacci(35)\nprint(result)`,
-      javascript: `function calculateDiscount(price, discount) {\n    return price - (price * discount / 100);\n}\n\nlet finalPrice = calculateDiscount(100, 20);\nconsole.log(finalPrice);`,
-      java: `public class Calculator {\n    public int divide(int a, int b) {\n        return a / b;\n    }\n    \n    public static void main(String[] args) {\n        Calculator calc = new Calculator();\n        System.out.println(calc.divide(10, 2));\n    }\n}`
-    };
-    setCode(examples[language] || examples.python);
-    showToast('Example code loaded', 'info');
+  // ===== STATUS HELPERS =====
+
+  const getStatusLabel = () => {
+    if (!serverStatus) return 'Checking…';
+    return serverStatus.status === 'healthy' ? 'Connected' : 'Offline';
   };
+
+  const getStatusDotClass = () => {
+    if (!serverStatus) return 'status-dot status-dot--checking';
+    return serverStatus.status === 'healthy'
+      ? 'status-dot status-dot--online'
+      : 'status-dot status-dot--offline';
+  };
+
+  // Determine Monaco theme
+  const monacoTheme = theme === 'dark' ? 'vs-dark' : 'light';
+
+  // ===== RENDER HISTORY PANEL CONTENT (shared between sidebar and drawer) =====
+
+  const renderHistoryContent = () => (
+    <>
+      <div className="left-panel-section">
+        <label className="left-panel-label" htmlFor="lang-select">Language</label>
+        <select
+          id="lang-select"
+          className="left-panel-select"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+        >
+          {LANGUAGES.map(l => (
+            <option key={l.value} value={l.value}>{l.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="history-header">
+        <span className="history-title">Recent</span>
+        {history.length > 0 && (
+          <span className="history-count">{history.length}/10</span>
+        )}
+      </div>
+
+      <div className="history-list">
+        {history.length === 0 ? (
+          <div className="history-empty">
+            No history yet. Run your first analysis.
+          </div>
+        ) : (
+          history.map(item => (
+            <div
+              key={item.id}
+              className="history-item"
+              onClick={() => handleRestore(item)}
+            >
+              <div className="history-item-top">
+                <span className={`lang-badge ${getLangBadgeClass(item.language)}`}>
+                  {item.language}
+                </span>
+                <span className="history-item-time">
+                  {getRelativeTime(item.timestamp)}
+                </span>
+              </div>
+              <div className="history-item-code">
+                {item.code.slice(0, 60)}
+              </div>
+              <button
+                className="history-item-delete"
+                onClick={(e) => handleDeleteHistory(e, item.id)}
+                title="Delete"
+              >
+                ✕
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </>
+  );
+
+  // ===== RENDER =====
 
   return (
-    <div className="min-h-screen transition-colors duration-300 ease-in-out bg-[#faf9f7] text-[#1a1a2e] dark:bg-[#0a0e1a] dark:text-slate-200 selection:bg-[#e8445a]/20 overflow-x-hidden">
-      
-      {/* Toast Notification */}
+    <motion.div 
+      className="app-shell"
+      variants={appVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+    >
+
+      {/* ===== Toast ===== */}
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
 
-      {/* Dynamic Background — Subtle warm glow for light, deep navy glow for dark */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#c83b4c]/[0.03] dark:bg-[#e8445a]/[0.06] rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-[#8b5cf6]/[0.02] dark:bg-[#6366f1]/[0.04] rounded-full blur-[120px]"></div>
+      {/* ===== Mobile/Tablet Drawer ===== */}
+      <div
+        className={`drawer-backdrop ${showDrawer ? 'open' : ''}`}
+        onClick={() => setShowDrawer(false)}
+      />
+      <div className={`drawer-panel ${showDrawer ? 'open' : ''}`}>
+        <div className="drawer-header">
+          <span className="drawer-header-title">CodeReview</span>
+          <button className="drawer-close" onClick={() => setShowDrawer(false)}>✕</button>
+        </div>
+        {renderHistoryContent()}
       </div>
 
-      {/* Sidebar Backdrop */}
-      <div 
-        className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 backdrop-blur-sm ${showSidebar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={() => setShowSidebar(false)}
-      ></div>
-
-      {/* Sidebar Panel */}
-      <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-[#0d1221] z-50 shadow-2xl transform transition-transform duration-300 ease-out border-r border-[#e5e2dc] dark:border-[#1e2642] ${showSidebar ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-5 border-b border-[#e5e2dc] dark:border-[#1e2642] flex justify-between items-center bg-[#f5f3f0] dark:bg-[#0d1221]">
-          <h2 className="text-xl font-bold text-[#c83b4c] dark:text-[#e8445a]">History</h2>
-          <button onClick={() => setShowSidebar(false)} className="p-2 hover:bg-[#ece9e3] dark:hover:bg-[#1a2035] rounded-full transition-colors text-[#4a4a5a] dark:text-slate-400">✕</button>
+      {/* ===== Header ===== */}
+      <header className="app-header">
+        <div className="app-header-logo">
+          <button
+            className="drawer-toggle"
+            onClick={() => setShowDrawer(true)}
+            title="Open menu"
+          >
+            ☰
+          </button>
+          <Link
+            to="/"
+            style={{
+              fontSize: 12,
+              color: 'var(--color-text-3)',
+              textDecoration: 'none',
+              transition: 'color 80ms ease',
+              marginRight: 8,
+            }}
+            onMouseEnter={(e) => e.target.style.color = 'var(--color-text-2)'}
+            onMouseLeave={(e) => e.target.style.color = 'var(--color-text-3)'}
+          >
+            ← Back to home
+          </Link>
+          <span className="app-header-logo-icon">&lt;/&gt;</span>
+          <span className="app-header-logo-text">CodeReview</span>
         </div>
-        
-        <div className="p-4 overflow-y-auto h-[calc(100vh-80px)] space-y-3">
-          {history.length === 0 ? (
-            <div className="text-center py-10 text-[#8a8a9a] dark:text-slate-500">
-              <p className="text-4xl mb-2">🕵️</p>
-              <p>No analysis history yet.</p>
-            </div>
-          ) : (
-            history.map(item => (
-              <div 
-                key={item.id}
-                onClick={() => handleRestore(item)}
-                className="group p-3 rounded-xl border border-[#e5e2dc] dark:border-[#1e2642] bg-[#faf9f7] dark:bg-[#0a0e1a]/50 hover:border-[#c83b4c] dark:hover:border-[#e8445a] cursor-pointer transition-all hover:shadow-md relative"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-bold uppercase px-2 py-1 rounded bg-[#c83b4c]/10 dark:bg-[#e8445a]/10 text-[#c83b4c] dark:text-[#f0576b]">{item.language}</span>
-                  <button 
-                    onClick={(e) => handleDeleteHistory(e, item.id)}
-                    className="text-[#8a8a9a] dark:text-slate-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
-                  >🗑️</button>
-                </div>
-                <p className="text-sm font-mono text-[#4a4a5a] dark:text-slate-400 line-clamp-2 mb-2 opacity-80">{item.code}</p>
-                <p className="text-xs text-[#8a8a9a] dark:text-slate-500 text-right">{item.timestamp}</p>
-              </div>
-            ))
-          )}
+
+        <div className="app-header-actions">
+          <div className="status-pill">
+            <span className={getStatusDotClass()} />
+            <span>{getStatusLabel()}</span>
+          </div>
+          <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? '☀' : '☾'}
+          </button>
         </div>
-      </div>
+      </header>
 
-      {/* Main Content Container */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col min-h-screen">
-        
-        {/* Header Section */}
-        <header className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10 bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md border border-[#e5e2dc] dark:border-[#1e2642] p-6 rounded-2xl shadow-lg dark:shadow-[0_4px_30px_rgba(0,0,0,0.3)] transition-all duration-300">
-          <div className="text-center md:text-left">
-            <h1 className="text-3xl md:text-4xl font-bold text-[#1a1a2e] dark:text-white">🤖 AI Code <span className="font-display italic text-[#c83b4c] dark:text-[#e8445a]">Reviewer</span> & Docs</h1>
-            <p className="text-[#8a8a9a] dark:text-slate-500 mt-2 text-sm font-medium tracking-wide">Powered by Gemini 2.5 Flash</p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <button onClick={() => setShowSidebar(true)} className="p-3 rounded-full bg-[#f0ece7] dark:bg-[#1a2035] text-[#4a4a5a] dark:text-slate-400 hover:bg-[#e8e3dc] dark:hover:bg-[#2a3350] transition-all duration-300 shadow-sm border border-[#e5e2dc] dark:border-[#2a3350] group relative">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 group-hover:text-[#c83b4c] dark:group-hover:text-[#e8445a] transition-colors">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {history.length > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-[#e8445a] rounded-full border-2 border-white dark:border-[#111827]"></span>}
-            </button>
+      {/* ===== Main Body ===== */}
+      <div className="app-body">
 
-            <button onClick={toggleTheme} className="p-3 rounded-full bg-[#f0ece7] dark:bg-[#1a2035] text-[#4a4a5a] dark:text-slate-400 hover:bg-[#e8e3dc] dark:hover:bg-[#2a3350] transition-all duration-300 shadow-sm border border-[#e5e2dc] dark:border-[#2a3350] group">
-              {theme === 'dark' ? (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 group-hover:text-amber-400 transition-colors"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 group-hover:text-[#c83b4c] transition-colors"><path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
-              )}
-            </button>
+        {/* --- Left Panel (desktop) --- */}
+        <aside className="left-panel">
+          {renderHistoryContent()}
+        </aside>
 
-            <div className="flex items-center gap-3 px-4 py-2 bg-[#f0ece7] dark:bg-[#0d1221] rounded-full border border-[#e5e2dc] dark:border-[#1e2642]">
-              <span className="text-[#8a8a9a] dark:text-slate-500 text-sm font-semibold">Server:</span>
-              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase ${serverStatus?.status === 'healthy' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'}`}>
-                <span className={`w-2 h-2 rounded-full ${serverStatus?.status === 'healthy' ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' : 'bg-red-500 dark:bg-red-400'}`}></span>
-                {serverStatus?.status === 'healthy' ? 'Online' : 'Offline'}
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Grid Layout */}
-        <main className="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-8 relative items-start">
-          
-          {/* Left Column: Input & Controls */}
-          {/* Sticky layout logic */}
-          <div className={`flex flex-col gap-6 transition-all duration-500 ${
-            results 
-            ? 'lg:col-span-6 lg:sticky lg:top-24 lg:self-start' 
-            : 'lg:col-span-12 max-w-4xl mx-auto w-full'
-          }`}>
-            
-            {/* Controls Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-white/90 dark:bg-[#111827]/90 p-4 rounded-xl border border-[#e5e2dc] dark:border-[#1e2642] shadow-lg backdrop-blur-sm transition-colors duration-300">
-              <div className="flex items-center gap-3">
-                <label htmlFor="lang" className="text-sm font-semibold text-[#4a4a5a] dark:text-slate-400">Language:</label>
-                <div className="relative group">
-                  <select id="lang" value={language} onChange={(e) => setLanguage(e.target.value)} className="appearance-none bg-[#f5f3f0] dark:bg-[#0a0e1a] text-[#1a1a2e] dark:text-slate-200 pl-4 pr-10 py-2 rounded-lg border border-[#e5e2dc] dark:border-[#2a3350] focus:border-[#c83b4c] dark:focus:border-[#e8445a] focus:ring-2 focus:ring-[#c83b4c]/20 dark:focus:ring-[#e8445a]/20 outline-none transition-all cursor-pointer font-medium hover:bg-[#ece9e3] dark:hover:bg-[#111827]">
-                    {languages.map(lang => (<option key={lang.value} value={lang.value}>{lang.label}</option>))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#8a8a9a] dark:text-slate-500 group-hover:text-[#c83b4c] dark:group-hover:text-[#e8445a] transition-colors">▼</div>
+        {/* --- Center Panel --- */}
+        <main className="center-panel">
+          <div className="editor-wrapper">
+            {showDiff && results ? (
+              <>
+                <div className="diff-labels">
+                  <span className="diff-label">Original</span>
+                  <span className="diff-label">AI Suggested</span>
                 </div>
-              </div>
-
-              <div className="flex gap-3">
-                {/* Diff Toggle Button */}
-                {results && (
-                  <button 
-                    onClick={() => setShowDiff(!showDiff)}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all hover:shadow-md flex items-center gap-2 ${
-                      showDiff 
-                      ? 'bg-[#e8445a] text-white border-[#e8445a] hover:bg-[#f0576b]' 
-                      : 'text-[#4a4a5a] dark:text-slate-300 bg-[#f0ece7] dark:bg-[#1a2035] border-[#e5e2dc] dark:border-[#2a3350] hover:bg-[#e8e3dc] dark:hover:bg-[#2a3350]'
-                    }`}
-                  >
-                    {showDiff ? '👁️ Hide Diff' : '👁️ Compare Fix'}
-                  </button>
-                )}
-
-                <button onClick={handleLoadExample} className="px-4 py-2 text-sm font-medium text-[#4a4a5a] dark:text-slate-300 bg-[#f0ece7] dark:bg-[#1a2035] hover:bg-[#e8e3dc] dark:hover:bg-[#2a3350] rounded-lg border border-[#e5e2dc] dark:border-[#2a3350] transition-all hover:shadow-md">📄 Example</button>
-                <button onClick={handleClear} className="px-4 py-2 text-sm font-medium text-red-500 dark:text-red-400 bg-[#f0ece7] dark:bg-[#1a2035] hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg border border-[#e5e2dc] dark:border-[#2a3350] hover:border-red-200 dark:hover:border-red-900/30 transition-all hover:shadow-md">🗑️ Clear</button>
-              </div>
-            </div>
-
-            {/* Editor Container */}
-            <div className="relative group rounded-xl overflow-hidden border border-[#d1ccc4] dark:border-[#1e2642] shadow-2xl bg-white dark:bg-[#1e1e1e] transition-colors duration-300">
-              <div className="absolute top-0 left-0 right-0 h-8 bg-[#f0ece7] dark:bg-[#252526] flex items-center px-4 gap-2 border-b border-[#e5e2dc] dark:border-[#333] transition-colors duration-300">
-                <div className="w-3 h-3 rounded-full bg-[#e8445a]/80"></div>
-                <div className="w-3 h-3 rounded-full bg-amber-400/80"></div>
-                <div className="w-3 h-3 rounded-full bg-emerald-400/80"></div>
-                <span className="ml-3 text-xs text-[#8a8a9a] dark:text-slate-500 font-mono">
-                  {showDiff ? 'editor.diff' : 'editor.main'}
-                </span>
-              </div>
-              <div className="pt-8">
-                {/* Conditional Rendering: DiffEditor vs Standard Editor */}
-                {showDiff && results ? (
-                  <DiffEditor
-                    height="550px"
-                    language={language}
-                    original={code}
-                    modified={extractCodeFromReview(results.review)}
-                    theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                    options={DIFF_EDITOR_OPTIONS}
-                  />
-                ) : (
-                  <Editor 
-                    height={results ? "550px" : "500px"} 
-                    language={language} 
-                    value={code} 
-                    onChange={(value) => setCode(value || '')} 
-                    theme={theme === 'dark' ? 'vs-dark' : 'light'} 
-                    options={EDITOR_OPTIONS}
-                  />
-                )}
-              </div>
-            </div>
-
-            <button onClick={handleAnalyze} disabled={loading} className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all transform duration-200 ${loading ? 'bg-[#e5e2dc] dark:bg-[#1a2035] text-[#8a8a9a] dark:text-slate-500 cursor-wait' : 'bg-[#e8445a] hover:bg-[#f0576b] text-white hover:shadow-[0_8px_30px_rgba(232,68,90,0.3)] hover:-translate-y-1 active:scale-[0.99]'}`}>
-              {loading ? <div className="flex items-center justify-center gap-3"><div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div><span>Analyzing Code Logic...</span></div> : <span className="flex items-center justify-center gap-2">✨ Run AI Analysis</span>}
-            </button>
+                <DiffEditor
+                  height="100%"
+                  language={language}
+                  original={code}
+                  modified={extractCodeFromReview(results.review)}
+                  theme={monacoTheme}
+                  options={DIFF_EDITOR_OPTIONS}
+                />
+              </>
+            ) : (
+              <Editor
+                height="100%"
+                language={language}
+                value={code}
+                onChange={(value) => setCode(value || '')}
+                theme={monacoTheme}
+                options={EDITOR_OPTIONS}
+              />
+            )}
           </div>
 
-          {/* Right Column: Results */}
-          {results && (
-            <div className="lg:col-span-6 space-y-6 animate-slideIn">
-              
-              {/* Download Button */}
+          {/* Toolbar */}
+          <div className="toolbar">
+            <div className="toolbar-group">
               <button
-                onClick={handleDownload}
-                className="w-full py-3 rounded-xl border border-[#c83b4c]/20 dark:border-[#e8445a]/20 bg-[#c83b4c]/5 dark:bg-[#e8445a]/10 text-[#c83b4c] dark:text-[#f0576b] font-semibold flex items-center justify-center gap-2 hover:bg-[#c83b4c]/10 dark:hover:bg-[#e8445a]/20 transition-all"
+                className="btn btn--primary"
+                onClick={handleAnalyze}
+                disabled={loading}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M12 12.75l-3.375-3.375M12 12.75l3.375-3.375M12 12.75V3" />
-                </svg>
-                Download Report (.md)
+                {loading ? (
+                  <>
+                    <span className="btn-spinner" />
+                    Analyzing…
+                  </>
+                ) : (
+                  'Analyze'
+                )}
               </button>
 
-              {/* Code Review Card */}
-              <div className="bg-white/90 dark:bg-[#111827]/90 backdrop-blur-sm border border-[#e5e2dc] dark:border-[#1e2642] rounded-xl overflow-hidden shadow-xl dark:shadow-[0_4px_30px_rgba(0,0,0,0.25)] flex flex-col max-h-[800px] transition-colors duration-300">
-                <div className="p-4 border-b border-[#e5e2dc] dark:border-[#1e2642] bg-[#f5f3f0]/80 dark:bg-[#0d1221]/80 flex justify-between items-center sticky top-0 z-10">
-                  <h3 className="text-lg font-bold text-[#c83b4c] dark:text-[#e8445a] flex items-center gap-2">📝 Code Review</h3>
-                  <button onClick={() => handleCopy(results.review, 'Review')} className="text-xs bg-white dark:bg-[#1a2035] hover:bg-[#f0ece7] dark:hover:bg-[#2a3350] text-[#4a4a5a] dark:text-slate-400 hover:text-[#c83b4c] dark:hover:text-[#e8445a] px-3 py-1.5 rounded-md border border-[#e5e2dc] dark:border-[#2a3350] transition-colors">Copy</button>
-                </div>
-                <div className="p-6 overflow-y-auto custom-scrollbar prose prose-sm max-w-none dark:prose-invert">
-                  <TypewriterMarkdown content={results.review} />
-                </div>
-              </div>
-
-              {/* Documentation Card */}
-              <div className="bg-white/90 dark:bg-[#111827]/90 backdrop-blur-sm border border-[#e5e2dc] dark:border-[#1e2642] rounded-xl overflow-hidden shadow-xl dark:shadow-[0_4px_30px_rgba(0,0,0,0.25)] flex flex-col max-h-[800px] transition-colors duration-300">
-                <div className="p-4 border-b border-[#e5e2dc] dark:border-[#1e2642] bg-[#f5f3f0]/80 dark:bg-[#0d1221]/80 flex justify-between items-center sticky top-0 z-10">
-                  <h3 className="text-lg font-bold text-[#c83b4c] dark:text-[#e8445a] flex items-center gap-2">📚 Documentation</h3>
-                  <button onClick={() => handleCopy(results.docstring, 'Documentation')} className="text-xs bg-white dark:bg-[#1a2035] hover:bg-[#f0ece7] dark:hover:bg-[#2a3350] text-[#4a4a5a] dark:text-slate-400 hover:text-[#c83b4c] dark:hover:text-[#e8445a] px-3 py-1.5 rounded-md border border-[#e5e2dc] dark:border-[#2a3350] transition-colors">Copy</button>
-                </div>
-                <div className="p-6 overflow-y-auto custom-scrollbar prose prose-sm max-w-none dark:prose-invert">
-                  <TypewriterMarkdown content={results.docstring} />
-                </div>
-              </div>
+              <button
+                className={`btn btn--secondary ${showDiff ? 'active' : ''}`}
+                onClick={() => setShowDiff(!showDiff)}
+                disabled={!results}
+                title={!results ? 'Run analysis first' : 'Toggle diff view'}
+              >
+                ⇄ Compare Fix
+              </button>
             </div>
-          )}
+
+            <div className="toolbar-group">
+              <button
+                className="btn btn--outline"
+                onClick={handleDownload}
+                disabled={!results}
+              >
+                ↓ Download Report
+              </button>
+              <button
+                className="btn btn--ghost"
+                onClick={handleClear}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
         </main>
 
-        <footer className="mt-12 py-6 border-t border-[#e5e2dc] dark:border-[#1e2642] text-center transition-colors duration-300">
-          <p className="text-[#8a8a9a] dark:text-slate-500 text-sm">Designed for 5th Sem Mini Project • <span className="text-[#c83b4c] dark:text-[#e8445a]">Information Science & Engineering</span></p>
-        </footer>
+        {/* --- Right Panel --- */}
+        <aside className="right-panel">
+          <div className="tab-bar">
+            <button
+              className={`tab-btn ${activeTab === 'review' ? 'active' : ''}`}
+              onClick={() => setActiveTab('review')}
+            >
+              Code Review
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'docs' ? 'active' : ''}`}
+              onClick={() => setActiveTab('docs')}
+            >
+              Documentation
+            </button>
+          </div>
+
+          <div className="results-content">
+            {loading ? (
+              <SkeletonLoader />
+            ) : results ? (
+              <div className="prose-custom">
+                {activeTab === 'review' && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                      <button
+                        className="btn btn--outline"
+                        style={{ height: 26, fontSize: 11, padding: '0 8px' }}
+                        onClick={() => handleCopy(results.review, 'Review')}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <TypewriterMarkdown content={results.review} />
+                  </>
+                )}
+                {activeTab === 'docs' && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                      <button
+                        className="btn btn--outline"
+                        style={{ height: 26, fontSize: 11, padding: '0 8px' }}
+                        onClick={() => handleCopy(results.docstring, 'Documentation')}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <TypewriterMarkdown content={results.docstring} />
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state-icon">{`{ }`}</div>
+                <div className="empty-state-text">
+                  Paste your code and click Analyze to get started.
+                </div>
+              </div>
+            )}
+          </div>
+        </aside>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -445,7 +575,7 @@ ${results.docstring}
 // 1. Typewriter Effect Component
 const TypewriterMarkdown = ({ content }) => {
   const [displayedContent, setDisplayedContent] = useState('');
-  
+
   useEffect(() => {
     setDisplayedContent('');
     let index = 0;
@@ -460,18 +590,28 @@ const TypewriterMarkdown = ({ content }) => {
     }, 10);
     return () => clearInterval(intervalId);
   }, [content]);
+
   return <ReactMarkdown>{displayedContent}</ReactMarkdown>;
 };
 
 // 2. Toast Component
 const Toast = ({ message, type, onClose }) => {
-  const styles = { success: 'bg-emerald-600 text-white border-emerald-700', error: 'bg-red-600 text-white border-red-700', info: 'bg-[#1a2035] text-slate-200 border-[#2a3350]' };
-  const icons = { success: '✓', error: '✕', info: 'ℹ' };
   return (
-    <div className={`fixed bottom-5 right-5 z-[60] flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl border ${styles[type]} animate-slideIn`}>
-      <span className="text-xl font-bold">{icons[type]}</span>
-      <p className="font-medium">{message}</p>
-      <button onClick={onClose} className="ml-2 opacity-70 hover:opacity-100 font-bold">✕</button>
+    <div className={`toast toast--${type}`}>
+      <span className="toast-message">{message}</span>
+      <button className="toast-close" onClick={onClose}>✕</button>
+    </div>
+  );
+};
+
+// 3. Skeleton Loader Component
+const SkeletonLoader = () => {
+  return (
+    <div className="skeleton-container">
+      <span className="skeleton-label">Analyzing your code…</span>
+      <div className="skeleton-line" />
+      <div className="skeleton-line" />
+      <div className="skeleton-line" />
     </div>
   );
 };

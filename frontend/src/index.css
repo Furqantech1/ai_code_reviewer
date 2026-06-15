@@ -1,52 +1,70 @@
-/* ===== Global Base Styles ===== */
+/* ===== Design Tokens ===== */
 
 :root {
-  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-  line-height: 1.6;
+  /* Dark theme (default) */
+  --color-bg:           #0E0F11;
+  --color-surface:      #16181C;
+  --color-surface-2:    #1E2025;
+  --color-border:       #2A2D35;
+  --color-border-2:     #383C47;
+  --color-text-1:       #F0F1F3;
+  --color-text-2:       #8B8FA8;
+  --color-text-3:       #555869;
+  --color-accent:       #4F7EFF;
+  --color-accent-hover: #3D6AE8;
+  --color-success:      #3D9970;
+  --color-warning:      #C98A2A;
+  --color-danger:       #C94A4A;
+  --color-code-bg:      #12141A;
+
+  /* Typography */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  /* Light mode defaults */
-  --bg-primary: #faf9f7;
-  --bg-secondary: #ffffff;
-  --bg-card: #ffffff;
-  --border-color: #e5e2dc;
-  --text-primary: #1a1a2e;
-  --text-secondary: #4a4a5a;
-  --text-muted: #8a8a9a;
-  --accent: #c83b4c;
-  --accent-hover: #b8324a;
-  --accent-subtle: rgba(200, 59, 76, 0.08);
 }
 
-.dark {
-  --bg-primary: #0a0e1a;
-  --bg-secondary: #111827;
-  --bg-card: #111827;
-  --border-color: #1e2642;
-  --text-primary: #f0f0f5;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --accent: #e8445a;
-  --accent-hover: #f0576b;
-  --accent-subtle: rgba(232, 68, 90, 0.12);
+.light {
+  --color-bg:           #F5F5F7;
+  --color-surface:      #FFFFFF;
+  --color-surface-2:    #F0F0F2;
+  --color-border:       #E0E0E4;
+  --color-border-2:     #C8C8CE;
+  --color-text-1:       #111214;
+  --color-text-2:       #5A5C6B;
+  --color-text-3:       #9A9CAB;
+  --color-accent:       #3366FF;
+  --color-accent-hover: #2255EE;
+  --color-code-bg:      #F8F8FA;
+  --color-success:      #3D9970;
+  --color-warning:      #C98A2A;
+  --color-danger:       #C94A4A;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--color-bg);
+  color: var(--color-text-1);
 }
 
 ::selection {
-  background: rgba(232, 68, 90, 0.25);
+  background: rgba(79, 126, 255, 0.25);
+}
+
+.light ::selection {
+  background: rgba(51, 102, 255, 0.2);
 }

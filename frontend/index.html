@@ -5,38 +5,25 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="AI-powered code reviewer and documentation generator. Get instant code reviews, auto-fix suggestions, and documentation powered by DeepSeek V3." />
+  <meta name="description" content="CodeReview — AI-powered code reviewer and documentation generator. Get instant code reviews, auto-fix suggestions, and documentation powered by Gemini 2.5 Flash." />
 
-  <!-- Google Fonts: Inter (body) + Playfair Display (display headings) -->
+  <!-- Google Fonts: Inter (UI) + JetBrains Mono (code) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- Tailwind via CDN -->
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-  <title>AI Code Review & Documentation</title>
+  <title>CodeReview — AI Code Analysis</title>
   <script>
   tailwind.config = {
     darkMode: 'class',
     theme: {
       extend: {
         fontFamily: {
-          sans: ['Inter', 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+          sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
           mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
-          display: ['"Playfair Display"', 'Georgia', 'serif'],
         },
-        colors: {
-          navy: {
-            950: '#060810',
-            900: '#0a0e1a',
-            800: '#0d1221',
-            700: '#111827',
-            600: '#1a2035',
-            500: '#1e2642',
-            400: '#2a3350',
-            300: '#3b4568',
-          }
-        }
       }
     }
   }
@@ -47,25 +34,5 @@
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
-
-<script>
-  tailwind.config = {
-    plugins: [tailwindcss.typography],
-    theme: {
-      extend: {
-        typography: {
-          DEFAULT: {
-            css: {
-              h2: { color: "#e8445a" },
-              h3: { color: "#f0576b" },
-              strong: { color: "#f59e0b" },
-              code: { color: "#34d399", background: "#111827", padding: "2px 4px", borderRadius: "6px" }
-            }
-          }
-        }
-      }
-    }
-  }
-</script>
 
 </html>
