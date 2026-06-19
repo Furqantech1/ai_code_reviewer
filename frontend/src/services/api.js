@@ -30,3 +30,25 @@ export const checkHealth = async () => {
     return { status: 'offline' };
   }
 };
+
+export const exportPDF = async (code, language, review, docstring) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/export-pdf`, {
+      code,
+      language,
+      review,
+      docstring
+    }, {
+      responseType: 'blob'
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data.detail || 'PDF generation failed');
+    } else if (error.request) {
+      throw new Error('No response from server. Is the backend running?');
+    } else {
+      throw new Error('Error setting up request');
+    }
+  }
+};

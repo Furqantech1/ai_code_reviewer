@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Editor, { DiffEditor } from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
-import { analyzeCode, checkHealth } from './services/api';
+import { analyzeCode, checkHealth, exportPDF } from './services/api';
 import './App.css';
 
 // ===== FRAMER MOTION VARIANTS =====
@@ -109,6 +109,7 @@ function App() {
   const [history, setHistory] = useState([]);
   const [showDrawer, setShowDrawer] = useState(false);
   const [activeTab, setActiveTab] = useState('review');
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   // Theme State
   const [theme, setTheme] = useState(() => {
@@ -229,6 +230,27 @@ ${results.docstring}
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showToast('Report downloaded', 'success');
+  };
+
+  const handleExportPDF = async () => {
+    if (!results) return;
+    setExportingPdf(true);
+    try {
+      const blob = await exportPDF(code, language, results.review, results.docstring);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ai_report_${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('PDF report downloaded successfully', 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to export PDF', 'error');
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   const handleAnalyze = async () => {
@@ -493,6 +515,23 @@ ${results.docstring}
                 disabled={!results}
               >
                 ↓ Download Report
+              </button>
+              <button
+                className="btn btn--secondary"
+                onClick={handleExportPDF}
+                disabled={!results || exportingPdf}
+              >
+                {exportingPdf ? (
+                  <>
+                    <span className="btn-spinner" style={{ borderColor: 'var(--color-border)', borderTopColor: 'var(--color-text-1)' }} />
+                    Generating PDF…
+                  </>
+                ) : (
+                  <>
+                    <span>📄</span>
+                    Export PDF
+                  </>
+                )}
               </button>
               <button
                 className="btn btn--ghost"
